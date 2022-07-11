@@ -31,7 +31,9 @@ func (b *Boid) Start() {
 }
 
 func (b *Boid) MoveOne() {
-	b.Velocity = b.Velocity.Add(b.calcAccel().Limit(-1, 1))
+	accel := b.calcAccel()
+	lock.Lock()
+	b.Velocity = b.Velocity.Add(accel.Limit(-1, 1))
 	boidMap[int(b.Position.X)][int(b.Position.Y)] = -1
 	b.Position = b.Position.Add(b.Velocity)
 	boidMap[int(b.Position.X)][int(b.Position.Y)] = b.Id
@@ -42,29 +44,37 @@ func (b *Boid) MoveOne() {
 	if next.Y >= screenHeight || next.Y < 0 {
 		b.Velocity = Vector2D{b.Velocity.X, -b.Velocity.Y}
 	}
+	lock.Unlock()
 }
 
 func (b Boid) calcAccel() Vector2D {
 
 	upper, lower := b.Position.AddV(viewRadius), b.Position.AddV(-viewRadius)
-	avgVelocity := Vector2D{0, 0}
+	avgPosition, avgVelocity := Vector2D{0, 0}, Vector2D{0, 0}
 	count := 0.0
 
+	lock.Lock()
 	for i := math.Max(lower.X, 0); i <= math.Min(upper.X, screenWidth); i++ {
 		for j := math.Max(lower.Y, 0); j <= math.Min(upper.Y, screenHeight); j++ {
 			if otherBoidId := boidMap[int(i)][int(j)]; otherBoidId != -1 && otherBoidId != b.Id {
 				if dist := gameBoids[otherBoidId].Position.Distance(b.Position); dist < viewRadius {
 					count++
 					avgVelocity = avgVelocity.Add(gameBoids[otherBoidId].Velocity)
+					avgPosition = avgPosition.Add(gameBoids[otherBoidId].Position)
 				}
 			}
 		}
 	}
+	lock.Unlock()
 
 	accel := Vector2D{0, 0}
 	if count > 0 {
 		avgVelocity = avgVelocity.DivideV(count)
-		accel = avgVelocity.Subtract(b.Velocity).MultiplyV(adjRate)
+		avgPosition = avgPosition.DivideV(count)
+		accelAlignment := avgVelocity.Subtract(b.Velocity).MultiplyV(adjRate)
+		accelCohesion := avgPosition.Subtract(b.Position).MultiplyV(adjRate)
+		accel = accel.Add(accelAlignment).Add(accelCohesion)
+		// accel = accelAlignment
 	}
 	return accel
 }
