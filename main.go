@@ -10,9 +10,9 @@ import (
 
 const (
 	screenWidth, screenHeight = 740, 450
-	boidCount                 = 500
+	boidCount                 = 5000
 	viewRadius                = 13
-	adjRate                   = float64(0.015)
+	adjRate                   = float64(0.2)
 )
 
 var (
