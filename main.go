@@ -5,34 +5,37 @@ import (
 	"log"
 	"sync"
 
-	"github.com/hajimehoshi/ebiten"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
 	screenWidth, screenHeight = 740, 450
 	boidCount                 = 500
 	viewRadius                = 13
-	adjRate                   = float64(0.001)
+	adjRate                   = float64(0.015)
 )
 
 var (
-	green     = color.RGBA{10, 255, 50, 255}
-	gameBoids [boidCount]*Boid
-	boidMap   [screenWidth + 1][screenHeight + 1]int
-	lock      = sync.Mutex{}
+	green   = color.RGBA{10, 255, 50, 255}
+	boids   [boidCount]*Boid
+	boidMap [screenWidth + 1][screenHeight + 1]int
+	rWlock  = sync.RWMutex{}
 )
 
 type Game struct {
 }
 
-func (g *Game) Update(screen *ebiten.Image) error {
-	for _, boid := range gameBoids {
-		screen.Set(int(boid.Position.X+1), int(boid.Position.Y), green)
-		screen.Set(int(boid.Position.X-1), int(boid.Position.Y), green)
-		screen.Set(int(boid.Position.X), int(boid.Position.Y+1), green)
-		screen.Set(int(boid.Position.X), int(boid.Position.Y-1), green)
-	}
+func (g *Game) Update() error {
 	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	for _, boid := range boids {
+		screen.Set(int(boid.position.x+1), int(boid.position.y), green)
+		screen.Set(int(boid.position.x-1), int(boid.position.y), green)
+		screen.Set(int(boid.position.x), int(boid.position.y-1), green)
+		screen.Set(int(boid.position.x), int(boid.position.y+1), green)
+	}
 }
 
 func (g *Game) Layout(_, _ int) (w, h int) {
@@ -48,7 +51,7 @@ func main() {
 	}
 
 	for i := 0; i < boidCount; i++ {
-		CreateBoid(i)
+		createBoid(i)
 	}
 
 	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
